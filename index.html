@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Traffic Light — Control Panel</title>
+<style>
+  :root{
+    --bg:#0b0b0d; --card:#121217; --muted:#9aa0a6; --accent:#00bcd4;
+    --red:#ff4d4f; --yellow:#ffd166; --green:#4cd964;
+    --glass: rgba(255,255,255,0.03);
+  }
+  html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial; background:linear-gradient(180deg,var(--bg), #070707); color:#efefef}
+  header{padding:18px 24px;border-bottom:1px solid rgba(255,255,255,0.03);display:flex;align-items:center;gap:16px}
+  header h1{margin:0;font-size:20px;color:var(--accent)}
+  .sub{color:var(--muted);font-size:13px}
+  .wrap{max-width:1040px;margin:20px auto;padding:18px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  @media(max-width:980px){ .grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:640px){ .grid{grid-template-columns:1fr} }
+
+  .card{
+    background:linear-gradient(180deg,var(--card), #0f0f12);
+    border-radius:12px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,0.6);
+    border:1px solid rgba(255,255,255,0.03);
+  }
+  .card h3{margin:0 0 8px 0;font-size:16px}
+  .row{display:flex;align-items:center;gap:12px}
+  .col{display:flex;flex-direction:column;gap:10px}
+  .muted{color:var(--muted);font-size:13px}
+
+  /* nice toggle */
+  .toggle {
+    width:56px;height:32px;border-radius:20px;background:#2a2a2a;position:relative;border:1px solid rgba(0,0,0,0.4);cursor:pointer;flex-shrink:0;
+  }
+  .dot{width:26px;height:26px;border-radius:50%;background:#fff;position:absolute;left:3px;top:3px;transition:all .22s;box-shadow:0 6px 18px rgba(0,0,0,0.6)}
+  .toggle.on{background:linear-gradient(90deg,#013642,#00545f)}
+  .toggle.on .dot{left:27px;background:white}
+
+  .small{font-size:13px;color:var(--muted)}
+  .slider{width:100%;-webkit-appearance:none;height:8px;border-radius:999px;background:#222;outline:none}
+  .slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);box-shadow:0 4px 12px rgba(0,0,0,0.6)}
+
+  /* circular timer */
+  .timer-wrap{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .timer-svg{width:128px;height:128px}
+  .time-label{font-size:18px;font-weight:600}
+  .indicator{font-size:13px;color:var(--muted)}
+
+  /* top controls */
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .pill{background:var(--glass);padding:6px 10px;border-radius:999px;font-size:13px;color:var(--muted)}
+
+  /* disabled overlay for sleep */
+  .disabled{opacity:.45;pointer-events:none;filter:grayscale(.02)}
+  footer{max-width:1040px;margin:20px auto;padding:8px;text-align:center;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <div style="display:flex;flex-direction:column">
+    <h1>Traffic Light — Control Panel</h1>
+    <div class="sub">Live remote control • Real-time timers • Sleep mode & automation</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="topbar">
+    <div class="brand">
+      <div class="pill">Device: NodeMCU (ESP8266)</div>
+      <div class="pill" id="statusP">Connecting…</div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:center">
+      <div class="small">Auto-sync: <span id="syncInterval">1s</span></div>
+      <div class="small">Last: <span id="lastSync">—</span></div>
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <!-- Red -->
+    <div class="card" id="card-red">
+      <h3>🔴 Red</h3>
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <div class="timer-wrap">
+          <svg class="timer-svg" viewBox="0 0 128 128">
+            <circle cx="64" cy="64" r="52" stroke="#111" stroke-width="12" fill="none"></circle>
+            <circle id="redArc" cx="64" cy="64" r="52" stroke="#ff4d4f" stroke-width="12" stroke-linecap="round"
+                    stroke-dasharray="326.726" stroke-dashoffset="0" transform="rotate(-90 64 64)"></circle>
+            <text id="redText" x="64" y="70" text-anchor="middle" class="time-label">--</text>
+          </svg>
+          <div class="indicator small">Time left</div>
+        </div>
+
+        <div style="flex:1;padding-left:12px">
+          <div class="row" style="justify-content:flex-end">
+            <div class="small">Manual</div>
+            <div id="redToggle" class="toggle" role="switch" aria-checked="false"><div class="dot"></div></div>
+          </div>
+          <div style="height:18px"></div>
+          <div class="small">Duration <span id="redVal">10</span>s</div>
+          <input id="redSlider" class="slider" type="range" min="1" max="60" value="10">
+        </div>
+      </div>
+    </div>
+
+    <!-- Yellow -->
+    <div class="card" id="card-yellow">
+      <h3>🟡 Yellow</h3>
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <div class="timer-wrap">
+          <svg class="timer-svg" viewBox="0 0 128 128">
+            <circle cx="64" cy="64" r="52" stroke="#111" stroke-width="12" fill="none"></circle>
+            <circle id="yellowArc" cx="64" cy="64" r="52" stroke="#ffd166" stroke-width="12" stroke-linecap="round"
+                    stroke-dasharray="326.726" stroke-dashoffset="0" transform="rotate(-90 64 64)"></circle>
+            <text id="yellowText" x="64" y="70" text-anchor="middle" class="time-label">--</text>
+          </svg>
+          <div class="indicator small">Time left</div>
+        </div>
+
+        <div style="flex:1;padding-left:12px">
+          <div class="row" style="justify-content:flex-end">
+            <div class="small">Manual</div>
+            <div id="yellowToggle" class="toggle" role="switch" aria-checked="false"><div class="dot"></div></div>
+          </div>
+          <div style="height:18px"></div>
+          <div class="small">Duration <span id="yellowVal">5</span>s</div>
+          <input id="yellowSlider" class="slider" type="range" min="1" max="60" value="5">
+        </div>
+      </div>
+    </div>
+
+    <!-- Green -->
+    <div class="card" id="card-green">
+      <h3>🟢 Green</h3>
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <div class="timer-wrap">
+          <svg class="timer-svg" viewBox="0 0 128 128">
+            <circle cx="64" cy="64" r="52" stroke="#111" stroke-width="12" fill="none"></circle>
+            <circle id="greenArc" cx="64" cy="64" r="52" stroke="#4cd964" stroke-width="12" stroke-linecap="round"
+                    stroke-dasharray="326.726" stroke-dashoffset="0" transform="rotate(-90 64 64)"></circle>
+            <text id="greenText" x="64" y="70" text-anchor="middle" class="time-label">--</text>
+          </svg>
+          <div class="indicator small">Time left</div>
+        </div>
+
+        <div style="flex:1;padding-left:12px">
+          <div class="row" style="justify-content:flex-end">
+            <div class="small">Manual</div>
+            <div id="greenToggle" class="toggle" role="switch" aria-checked="false"><div class="dot"></div></div>
+          </div>
+          <div style="height:18px"></div>
+          <div class="small">Duration <span id="greenVal">10</span>s</div>
+          <input id="greenSlider" class="slider" type="range" min="1" max="60" value="10">
+        </div>
+      </div>
+    </div>
+
+    <!-- Automation + Sleep -->
+    <div class="card" style="grid-column: span 3;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap">
+        <div>
+          <h3 style="margin:0">Control</h3>
+          <div class="muted">Automation and Sleep controls</div>
+        </div>
+
+        <div style="display:flex;gap:18px;align-items:center">
+          <div style="text-align:center">
+            <div class="small">Automation</div>
+            <div id="autoToggle" class="toggle" role="switch" aria-checked="false"><div class="dot"></div></div>
+          </div>
+
+          <div style="text-align:center">
+            <div class="small">Sleep Mode</div>
+            <div id="sleepToggle" class="toggle" role="switch" aria-checked="false"><div class="dot"></div></div>
+          </div>
+
+          <div style="min-width:220px">
+            <div class="muted" style="margin-bottom:6px">Live status</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <div class="pill" id="connState" style="padding:8px 10px;background:var(--glass);border-radius:8px;color:var(--muted)">—</div>
+              <div class="muted" id="uptime">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer>Share this link with trusted friends only — token is embedded. Regenerate token in Blynk if needed.</footer>
+
+<script>
+/* -------------------------
+   CONFIG
+   ------------------------- */
+const AUTH = "NZ19PT_cHiLij0HUaiHefkShjfDKhhl5"; // hardcoded token (yours)
+const API_BASE = "https://blynk.cloud/external/api";
+const POLL_INTERVAL_MS = 1000; // 1s
+
+// virtual pins mapping
+const PINS = {
+  RED: "V0", YELLOW: "V1", GREEN: "V2",
+  RED_TIME: "V3", YELLOW_TIME: "V4", GREEN_TIME: "V5",
+  AUTO: "V6",
+  RED_LEFT: "V7", YELLOW_LEFT: "V8", GREEN_LEFT: "V9",
+  SLEEP: "V10"
+};
+
+// circle geometry
+const R = 52;
+const CIRC = 2 * Math.PI * R;
+
+/* -------------------------
+   DOM refs
+   ------------------------- */
+const statusP = document.getElementById("statusP");
+const lastSync = document.getElementById("lastSync");
+
+const redToggle = document.getElementById("redToggle");
+const yellowToggle = document.getElementById("yellowToggle");
+const greenToggle = document.getElementById("greenToggle");
+
+const redSlider = document.getElementById("redSlider");
+const yellowSlider = document.getElementById("yellowSlider");
+const greenSlider = document.getElementById("greenSlider");
+
+const redVal = document.getElementById("redVal");
+const yellowVal = document.getElementById("yellowVal");
+const greenVal = document.getElementById("greenVal");
+
+const redArc = document.getElementById("redArc");
+const yellowArc = document.getElementById("yellowArc");
+const greenArc = document.getElementById("greenArc");
+
+const redText = document.getElementById("redText");
+const yellowText = document.getElementById("yellowText");
+const greenText = document.getElementById("greenText");
+
+const autoToggle = document.getElementById("autoToggle");
+const sleepToggle = document.getElementById("sleepToggle");
+
+const connState = document.getElementById("connState");
+const uptime = document.getElementById("uptime");
+
+/* -------------------------
+   Helpers: Blynk read/write
+   ------------------------- */
+function updatePin(pin, value){
+  // write value to virtual pin
+  fetch(`${API_BASE}/update?token=${AUTH}&${pin}=${encodeURIComponent(value)}`)
+    .catch(e => console.warn("update failed", e));
+}
+
+async function readPin(pin){
+  // read a single pinned value; returns string
+  try{
+    const r = await fetch(`${API_BASE}/get?token=${AUTH}&${pin}`);
+    const txt = await r.text();
+    // Blynk get returns e.g. "[0]" or "0" depending; try to extract number
+    try{
+      const parsed = JSON.parse(txt);
+      if (Array.isArray(parsed)) return String(parsed[0]);
+      return String(parsed);
+    }catch(e){
+      return txt.trim();
+    }
+  }catch(e){
+    console.warn("readPin error", e);
+    throw e;
+  }
+}
+
+/* -------------------------
+   UI helpers
+   ------------------------- */
+function setToggleElm(el, on){
+  if(on){ el.classList.add("on"); el.setAttribute("aria-checked","true"); }
+  else { el.classList.remove("on"); el.setAttribute("aria-checked","false"); }
+}
+
+function disableControls(disabled){
+  const elements = [redToggle, yellowToggle, greenToggle, redSlider, yellowSlider, greenSlider];
+  elements.forEach(x => {
+    if(disabled) x.classList.add("disabled");
+    else x.classList.remove("disabled");
+    if(x.tagName === "INPUT") x.disabled = disabled;
+  });
+}
+
+/* -------------------------
+   Circular timer animation state
+   ------------------------- */
+let timerState = {
+  red: {left:0, lastTs:0, duration:10},
+  yellow:{left:0,lastTs:0, duration:5},
+  green:{left:0,lastTs:0, duration:10}
+};
+
+function setCircleProgress(arcEl, secondsLeft, totalDuration, textEl){
+  // clamp
+  if(totalDuration <= 0) totalDuration = 1;
+  if(secondsLeft < 0) secondsLeft = 0;
+  const frac = Math.max(0, Math.min(1, secondsLeft / totalDuration));
+  const offset = CIRC * (1 - frac);
+  arcEl.style.strokeDasharray = `${CIRC}`;
+  arcEl.style.strokeDashoffset = `${offset}`;
+  textEl.textContent = secondsLeft.toString();
+}
+
+/* -------------------------
+   Sync logic
+   ------------------------- */
+
+let lastGood = Date.now();
+
+async function syncOnce(){
+  try{
+    // read all pins (read individually so parsing is reliable)
+    const [
+      vRed, vYellow, vGreen,
+      vRedTime, vYellowTime, vGreenTime,
+      vAuto, vRedLeft, vYellowLeft, vGreenLeft, vSleep
+    ] = await Promise.all([
+      readPin(PINS.RED), readPin(PINS.YELLOW), readPin(PINS.GREEN),
+      readPin(PINS.RED_TIME), readPin(PINS.YELLOW_TIME), readPin(PINS.GREEN_TIME),
+      readPin(PINS.AUTO), readPin(PINS.RED_LEFT), readPin(PINS.YELLOW_LEFT), readPin(PINS.GREEN_LEFT), readPin(PINS.SLEEP)
+    ]);
+
+    // update last sync
+    lastGood = Date.now();
+    statusP.textContent = "Connected";
+    connState.textContent = "OK";
+    lastSync.textContent = new Date().toLocaleTimeString();
+
+    // parse numeric values
+    const redTimeSet = parseInt(vRedTime) || 10;
+    const yellowTimeSet = parseInt(vYellowTime) || 5;
+    const greenTimeSet = parseInt(vGreenTime) || 10;
+
+    // set sliders and labels if changed
+    if(redSlider.value != redTimeSet){ redSlider.value = redTimeSet; redVal.textContent = redTimeSet; timerState.red.duration = redTimeSet; }
+    if(yellowSlider.value != yellowTimeSet){ yellowSlider.value = yellowTimeSet; yellowVal.textContent = yellowTimeSet; timerState.yellow.duration = yellowTimeSet; }
+    if(greenSlider.value != greenTimeSet){ greenSlider.value = greenTimeSet; greenVal.textContent = greenTimeSet; timerState.green.duration = greenTimeSet; }
+
+    // automation and sleep
+    const autoOn = Number(vAuto) === 1;
+    const sleepOn = Number(vSleep) === 1;
+    setToggleElm(autoToggle, autoOn);
+    setToggleElm(sleepToggle, sleepOn);
+
+    // disable controls when automation on OR sleep on
+    disableControls(autoOn || sleepOn);
+
+    // for lights: Blynk stores 0=ON (inverted), 1=OFF. UI must show physical ON => checked true when pin==0
+    setToggleElm(redToggle, Number(vRed) === 0);
+    setToggleElm(yellowToggle, Number(vYellow) === 0);
+    setToggleElm(greenToggle, Number(vGreen) === 0);
+
+    // countdown left values (V7-V9) -> update timerState left and lastTs
+    const redLeftN = Math.max(0, parseInt(vRedLeft) || 0);
+    const yellowLeftN = Math.max(0, parseInt(vYellowLeft) || 0);
+    const greenLeftN = Math.max(0, parseInt(vGreenLeft) || 0);
+
+    timerState.red.left = redLeftN;
+    timerState.red.lastTs = Date.now();
+    timerState.yellow.left = yellowLeftN;
+    timerState.yellow.lastTs = Date.now();
+    timerState.green.left = greenLeftN;
+    timerState.green.lastTs = Date.now();
+
+    // set initial circle immediately
+    setCircleProgress(redArc, redLeftN, timerState.red.duration, redText);
+    setCircleProgress(yellowArc, yellowLeftN, timerState.yellow.duration, yellowText);
+    setCircleProgress(greenArc, greenLeftN, timerState.green.duration, greenText);
+
+  }catch(e){
+    // show disconnected state but keep trying
+    statusP.textContent = "Offline";
+    connState.textContent = "Offline";
+    console.warn("sync failed", e);
+  }
+}
+
+/* -------------------------
+   User interactions
+   ------------------------- */
+
+// toggles: when user clicks UI toggles we write to Blynk
+function attachToggle(dom, pin, inverted){
+  dom.addEventListener("click", async () => {
+    // if disabled by sleep -> do nothing
+    if(dom.classList.contains("disabled")) return;
+
+    const nowOn = dom.classList.contains("on"); // current visual state
+    const newOn = !nowOn;
+    setToggleElm(dom, newOn);
+
+    // inverted mapping: for V0-V2 hardware expects 0=ON,1=OFF
+    const toSend = inverted ? (newOn ? 0 : 1) : (newOn ? 1 : 0);
+    updatePin(pin, toSend);
+  });
+}
+
+// attach toggles (red,yellow,green) -> inverted true
+attachToggle(redToggle, PINS.RED, true);
+attachToggle(yellowToggle, PINS.YELLOW, true);
+attachToggle(greenToggle, PINS.GREEN, true);
+
+// automation & sleep toggles (not inverted)
+attachToggle(autoToggle, PINS.AUTO, false);
+attachToggle(sleepToggle, PINS.SLEEP, false);
+
+// sliders: on change, update the V3-V5
+redSlider.addEventListener("input", e => { redVal.textContent = e.target.value; updatePin(PINS.RED_TIME, e.target.value); timerState.red.duration = Number(e.target.value); });
+yellowSlider.addEventListener("input", e => { yellowVal.textContent = e.target.value; updatePin(PINS.YELLOW_TIME, e.target.value); timerState.yellow.duration = Number(e.target.value); });
+greenSlider.addEventListener("input", e => { greenVal.textContent = e.target.value; updatePin(PINS.GREEN_TIME, e.target.value); timerState.green.duration = Number(e.target.value); });
+
+/* -------------------------
+   Smooth countdown render
+   ------------------------- */
+
+function animateTimers(){
+  const now = Date.now();
+
+  // helper to compute seconds left based on last known value and elapsed time
+  function tick(state){
+    const elapsed = Math.floor((now - state.lastTs) / 1000);
+    const left = Math.max(0, state.left - elapsed);
+    return left;
+  }
+
+  const leftR = tick(timerState.red);
+  const leftY = tick(timerState.yellow);
+  const leftG = tick(timerState.green);
+
+  setCircleProgress(redArc, leftR, timerState.red.duration, redText);
+  setCircleProgress(yellowArc, leftY, timerState.yellow.duration, yellowText);
+  setCircleProgress(greenArc, leftG, timerState.green.duration, greenText);
+
+  requestAnimationFrame(animateTimers);
+}
+
+/* -------------------------
+   Startup
+   ------------------------- */
+
+(async function start(){
+  // initialize arcs dasharray (constant)
+  [redArc, yellowArc, greenArc].forEach(a => a.style.strokeDasharray = `${CIRC}`);
+  // initial small UI state
+  setToggleElm(redToggle, false); setToggleElm(yellowToggle,false); setToggleElm(greenToggle,false);
+  setToggleElm(autoToggle,false); setToggleElm(sleepToggle,false);
+
+  // kickoff animation
+  requestAnimationFrame(animateTimers);
+
+  // initial sync & periodic sync
+  await syncOnce();
+  setInterval(syncOnce, POLL_INTERVAL_MS);
+
+  // small heartbeat update for last sync display
+  setInterval(()=>{ lastSync.textContent = new Date().toLocaleTimeString(); }, 1000);
+})();
+</script>
+</body>
+</html>
