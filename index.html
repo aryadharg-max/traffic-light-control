@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Traffic Light Control</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #121212;
+    color: white;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+  }
+  h1 {
+    background: #1f1f1f;
+    padding: 15px;
+    margin: 0;
+  }
+  .container {
+    max-width: 500px;
+    margin: auto;
+    padding: 20px;
+    display: none; /* hidden until loaded */
+    animation: fadeIn 0.6s ease forwards;
+  }
+  .card {
+    background: #1f1f1f;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  }
+  .title {
+    font-size: 1.2em;
+    margin-bottom: 10px;
+  }
+  .toggle-switch {
+    position: relative;
+    width: 60px;
+    height: 30px;
+    display: inline-block;
+  }
+  .toggle-switch input {
+    display: none;
+  }
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    background-color: #555;
+    border-radius: 34px;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transition: .4s;
+  }
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    border-radius: 50%;
+    transition: .4s;
+  }
+  input:checked + .slider {
+    background-color: #4caf50;
+  }
+  input:checked + .slider:before {
+    transform: translateX(30px);
+  }
+  .slider.round {
+    border-radius: 34px;
+  }
+  .slider.round:before {
+    border-radius: 50%;
+  }
+  .range-input {
+    width: 80%;
+    margin-top: 10px;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  /* Loader */
+  .loader {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 80vh;
+  }
+  .dot {
+    width: 12px;
+    height: 12px;
+    background: #4caf50;
+    border-radius: 50%;
+    margin: 0 5px;
+    animation: bounce 0.6s infinite alternate;
+  }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce {
+    to { transform: translateY(-10px); }
+  }
+</style>
+</head>
+<body>
+
+<h1>🚦 Traffic Light Control</h1>
+
+<div id="loader" class="loader">
+  <div class="dot"></div>
+  <div class="dot"></div>
+  <div class="dot"></div>
+</div>
+
+<div class="container" id="mainContainer">
+
+  <div class="card">
+    <div class="title">Red Light</div>
+    <label class="toggle-switch">
+      <input type="checkbox" id="V0" onchange="toggleLight(0, this.checked)">
+      <span class="slider round"></span>
+    </label>
+  </div>
+
+  <div class="card">
+    <div class="title">Yellow Light</div>
+    <label class="toggle-switch">
+      <input type="checkbox" id="V1" onchange="toggleLight(1, this.checked)">
+      <span class="slider round"></span>
+    </label>
+  </div>
+
+  <div class="card">
+    <div class="title">Green Light</div>
+    <label class="toggle-switch">
+      <input type="checkbox" id="V2" onchange="toggleLight(2, this.checked)">
+      <span class="slider round"></span>
+    </label>
+  </div>
+
+  <div class="card">
+    <div class="title">Red Light Time: <span id="valV3">30</span>s</div>
+    <input type="range" min="0" max="60" id="V3" value="30" class="range-input" oninput="updateTimer(3,this.value)">
+  </div>
+
+  <div class="card">
+    <div class="title">Yellow Light Time: <span id="valV4">5</span>s</div>
+    <input type="range" min="0" max="60" id="V4" value="5" class="range-input" oninput="updateTimer(4,this.value)">
+  </div>
+
+  <div class="card">
+    <div class="title">Green Light Time: <span id="valV5">30</span>s</div>
+    <input type="range" min="0" max="60" id="V5" value="30" class="range-input" oninput="updateTimer(5,this.value)">
+  </div>
+
+  <div class="card">
+    <div class="title">Traffic Automation</div>
+    <label class="toggle-switch">
+      <input type="checkbox" id="V6" onchange="toggleLight(6, this.checked)">
+      <span class="slider round"></span>
+    </label>
+  </div>
+
+</div>
+
+<script>
+const AUTH_TOKEN = "NZ19PT_cHiLij0HUaiHefkShjfDKhhl5";
+const UPDATE_URL = "https://blynk.cloud/external/api/update";
+const GET_URL = "https://blynk.cloud/external/api/get";
+
+// Inverted logic for lights only (V0, V1, V2)
+function toggleLight(pin, state) {
+  let value;
+  if (pin <= 2) {
+    value = state ? 0 : 1; // inverted
+  } else {
+    value = state ? 1 : 0; // normal
+  }
+  fetch(`${UPDATE_URL}?token=${AUTH_TOKEN}&V${pin}=${value}`)
+    .then(() => console.log(`Sent V${pin}=${value}`))
+    .catch(err => alert("Error: " + err));
+}
+
+function updateTimer(pin, value) {
+  document.getElementById(`valV${pin}`).innerText = value;
+  fetch(`${UPDATE_URL}?token=${AUTH_TOKEN}&V${pin}=${value}`)
+    .then(() => console.log(`Timer V${pin}=${value}`))
+    .catch(err => alert("Error: " + err));
+}
+
+function syncFromBlynk(firstLoad=false) {
+  fetch(`${GET_URL}?token=${AUTH_TOKEN}&V0&V1&V2&V3&V4&V5&V6`)
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById("V0").checked = data.V0 == 0;
+      document.getElementById("V1").checked = data.V1 == 0;
+      document.getElementById("V2").checked = data.V2 == 0;
+
+      document.getElementById("V3").value = data.V3;
+      document.getElementById("valV3").innerText = data.V3;
+
+      document.getElementById("V4").value = data.V4;
+      document.getElementById("valV4").innerText = data.V4;
+
+      document.getElementById("V5").value = data.V5;
+      document.getElementById("valV5").innerText = data.V5;
+
+      document.getElementById("V6").checked = data.V6 == 1;
+
+      if (firstLoad) {
+        document.getElementById("loader").style.display = "none";
+        document.getElementById("mainContainer").style.display = "block";
+      }
+    })
+    .catch(err => console.error("Sync error:", err));
+}
+
+syncFromBlynk(true);
+setInterval(syncFromBlynk, 3000);
+</script>
+
+</body>
+</html>
