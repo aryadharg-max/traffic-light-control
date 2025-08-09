@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Traffic Light Control Panel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+    body {
+        background: #0a0a0a;
+        color: white;
+        font-family: Arial, sans-serif;
+        text-align: center;
+        margin: 0;
+        padding: 0;
+    }
+    h1 {
+        color: #ff4444;
+        margin-top: 20px;
+    }
+    .dashboard {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+        padding: 20px;
+    }
+    .card {
+        background: #1a1a1a;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 0 15px rgba(255,255,255,0.1);
+    }
+    .switch {
+        appearance: none;
+        width: 60px;
+        height: 30px;
+        background: #333;
+        border-radius: 30px;
+        position: relative;
+        outline: none;
+        cursor: pointer;
+    }
+    .switch:checked {
+        background: #00cc66;
+    }
+    .switch::before {
+        content: "";
+        width: 26px;
+        height: 26px;
+        background: white;
+        border-radius: 50%;
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        transition: 0.3s;
+    }
+    .switch:checked::before {
+        left: 32px;
+    }
+    .timer {
+        width: 120px;
+        height: 120px;
+        margin: auto;
+    }
+    .circle-bg {
+        fill: none;
+        stroke: #333;
+        stroke-width: 10;
+    }
+    .circle {
+        fill: none;
+        stroke-width: 10;
+        stroke-linecap: round;
+        transform: rotate(-90deg);
+        transform-origin: 50% 50%;
+        transition: stroke 0.3s;
+    }
+    .time-text {
+        fill: white;
+        font-size: 22px;
+        text-anchor: middle;
+        dominant-baseline: middle;
+    }
+    input[type=range] {
+        width: 100%;
+    }
+</style>
+</head>
+<body>
+
+<h1>🚦 Traffic Light Control Panel</h1>
+<div class="dashboard">
+
+    <!-- Light Cards -->
+    <div class="card">
+        <h2>🔴 Red Light</h2>
+        <label>
+            <input type="checkbox" id="redSwitch" class="switch">
+        </label>
+        <svg class="timer">
+            <circle class="circle-bg" cx="60" cy="60" r="50"></circle>
+            <circle id="redCircle" class="circle" cx="60" cy="60" r="50"></circle>
+            <text id="redTimeText" class="time-text" x="60" y="65">0</text>
+        </svg>
+        <input type="range" id="redSlider" min="1" max="60" value="10">
+    </div>
+
+    <div class="card">
+        <h2>🟡 Yellow Light</h2>
+        <label>
+            <input type="checkbox" id="yellowSwitch" class="switch">
+        </label>
+        <svg class="timer">
+            <circle class="circle-bg" cx="60" cy="60" r="50"></circle>
+            <circle id="yellowCircle" class="circle" cx="60" cy="60" r="50"></circle>
+            <text id="yellowTimeText" class="time-text" x="60" y="65">0</text>
+        </svg>
+        <input type="range" id="yellowSlider" min="1" max="60" value="5">
+    </div>
+
+    <div class="card">
+        <h2>🟢 Green Light</h2>
+        <label>
+            <input type="checkbox" id="greenSwitch" class="switch">
+        </label>
+        <svg class="timer">
+            <circle class="circle-bg" cx="60" cy="60" r="50"></circle>
+            <circle id="greenCircle" class="circle" cx="60" cy="60" r="50"></circle>
+            <text id="greenTimeText" class="time-text" x="60" y="65">0</text>
+        </svg>
+        <input type="range" id="greenSlider" min="1" max="60" value="15">
+    </div>
+
+    <!-- Automation -->
+    <div class="card">
+        <h2>⚙ Automation</h2>
+        <label>
+            <input type="checkbox" id="automationSwitch" class="switch">
+        </label>
+    </div>
+
+    <!-- Sleep Mode -->
+    <div class="card">
+        <h2>🌙 Sleep Mode</h2>
+        <label>
+            <input type="checkbox" id="sleepSwitch" class="switch">
+        </label>
+        <p>Turns off all lights & automation</p>
+    </div>
+
+</div>
+
+<script>
+    const token = "NZ19PT_cHiLij0HUaiHefkShjfDKhhl5";
+    const apiBase = "https://blynk.cloud/external/api/";
+
+    const lights = [
+        {switchId: "redSwitch", pin: "V0", circleId: "redCircle", textId: "redTimeText", sliderId: "redSlider", timePin: "V3", color: "#ff3333"},
+        {switchId: "yellowSwitch", pin: "V1", circleId: "yellowCircle", textId: "yellowTimeText", sliderId: "yellowSlider", timePin: "V4", color: "#ffcc00"},
+        {switchId: "greenSwitch", pin: "V2", circleId: "greenCircle", textId: "greenTimeText", sliderId: "greenSlider", timePin: "V5", color: "#00ff66"}
+    ];
+
+    const automationPin = "V6";
+    const sleepSwitch = document.getElementById("sleepSwitch");
+    const automationSwitch = document.getElementById("automationSwitch");
+
+    function setBlynk(pin, value) {
+        fetch(`${apiBase}update?token=${token}&${pin}=${value}`);
+    }
+
+    function getBlynk(pin) {
+        return fetch(`${apiBase}get?token=${token}&${pin}`).then(r => r.text());
+    }
+
+    // Initialize listeners
+    lights.forEach(light => {
+        const sw = document.getElementById(light.switchId);
+        const slider = document.getElementById(light.sliderId);
+        const circle = document.getElementById(light.circleId);
+
+        sw.addEventListener("change", () => {
+            if (sleepSwitch.checked) return;
+            setBlynk(light.pin, sw.checked ? 0 : 1); // Inverted logic
+        });
+        slider.addEventListener("input", () => {
+            setBlynk(light.timePin, slider.value);
+        });
+
+        circle.style.stroke = light.color;
+    });
+
+    automationSwitch.addEventListener("change", () => {
+        if (sleepSwitch.checked) return;
+        setBlynk(automationPin, automationSwitch.checked ? 1 : 0);
+    });
+
+    sleepSwitch.addEventListener("change", () => {
+        if (sleepSwitch.checked) {
+            // Force all off
+            lights.forEach(light => {
+                document.getElementById(light.switchId).checked = false;
+                setBlynk(light.pin, 1);
+            });
+            automationSwitch.checked = false;
+            setBlynk(automationPin, 0);
+        }
+    });
+
+    // Update loop
+    setInterval(() => {
+        lights.forEach(light => {
+            getBlynk(light.pin).then(val => {
+                document.getElementById(light.switchId).checked = (val.trim() === "0"); // Inverted logic
+            });
+            getBlynk(light.timePin).then(val => {
+                const t = parseInt(val.trim()) || 0;
+                document.getElementById(light.sliderId).value = t;
+                document.getElementById(light.textId).textContent = t;
+                const circle = document.getElementById(light.circleId);
+                const circumference = 2 * Math.PI * 50;
+                const offset = circumference - (t / 60) * circumference;
+                circle.setAttribute("stroke-dasharray", circumference);
+                circle.setAttribute("stroke-dashoffset", offset);
+            });
+        });
+        getBlynk(automationPin).then(val => {
+            automationSwitch.checked = (val.trim() === "1");
+        });
+    }, 1000);
+</script>
+
+</body>
+</html>
