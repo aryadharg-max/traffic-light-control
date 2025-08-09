@@ -1,62 +1,72 @@
-#define BLYNK_TEMPLATE_ID "TMPL31B0-Kdf5"
-#define BLYNK_TEMPLATE_NAME "traffic light controller"
-#define BLYNK_AUTH_TOKEN "NZ19PT_cHiLij0HUaiHefkShjfDKhhl5"
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Traffic Light Control</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 {
+      color: #0ff;
+    }
+    .btn {
+      display: inline-block;
+      margin: 10px;
+      padding: 15px 25px;
+      font-size: 18px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      color: white;
+    }
+    .red { background: red; }
+    .yellow { background: orange; }
+    .green { background: green; }
+    .auto { background: blue; }
+  </style>
+</head>
+<body>
+  <h1>Traffic Light Control</h1>
 
-#include <WiFi.h>
-#include <WiFiClient.h>
-#include <BlynkSimpleEsp32.h>
+  <h2>Red Light</h2>
+  <button class="btn red" onclick="toggleLight(1, true)">Turn ON</button>
+  <button class="btn red" onclick="toggleLight(1, false)">Turn OFF</button>
 
-// WiFi credentials
-char ssid[] = "Test wifi";
-char pass[] = "qwertyuiop";
+  <h2>Yellow Light</h2>
+  <button class="btn yellow" onclick="toggleLight(2, true)">Turn ON</button>
+  <button class="btn yellow" onclick="toggleLight(2, false)">Turn OFF</button>
 
-// Pin setup
-#define RED_PIN  2
-#define YELLOW_PIN 4
-#define GREEN_PIN 5
+  <h2>Green Light</h2>
+  <button class="btn green" onclick="toggleLight(3, true)">Turn ON</button>
+  <button class="btn green" onclick="toggleLight(3, false)">Turn OFF</button>
 
-bool automationEnabled = false;
+  <h2>Automation</h2>
+  <button class="btn auto" onclick="toggleLight(4, true)">Enable</button>
+  <button class="btn auto" onclick="toggleLight(4, false)">Disable</button>
 
-// Inverted logic: LOW = ON, HIGH = OFF
-void setLight(int pin, bool on) {
-  digitalWrite(pin, on ? LOW : HIGH);
-}
+  <script>
+    const AUTH_TOKEN = "NZ19PT_cHiLij0HUaiHefkShjfDKhhl5"; // Your Blynk token
+    const BASE_URL = "https://blynk.cloud/external/api/update";
 
-// Blynk virtual pins
-BLYNK_WRITE(V1) { setLight(RED_PIN, param.asInt() == 0); }    // Red
-BLYNK_WRITE(V2) { setLight(YELLOW_PIN, param.asInt() == 0); } // Yellow
-BLYNK_WRITE(V3) { setLight(GREEN_PIN, param.asInt() == 0); }  // Green
-BLYNK_WRITE(V4) { automationEnabled = (param.asInt() == 0); } // Automation toggle
-
-void setup() {
-  Serial.begin(115200);
-  pinMode(RED_PIN, OUTPUT);
-  pinMode(YELLOW_PIN, OUTPUT);
-  pinMode(GREEN_PIN, OUTPUT);
-
-  // Lights off initially
-  setLight(RED_PIN, false);
-  setLight(YELLOW_PIN, false);
-  setLight(GREEN_PIN, false);
-
-  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
-}
-
-void loop() {
-  Blynk.run();
-
-  if (automationEnabled) {
-    setLight(RED_PIN, true);
-    delay(3000);
-    setLight(RED_PIN, false);
-
-    setLight(GREEN_PIN, true);
-    delay(3000);
-    setLight(GREEN_PIN, false);
-
-    setLight(YELLOW_PIN, true);
-    delay(1000);
-    setLight(YELLOW_PIN, false);
-  }
-}
-
+    // Inverted logic: sending "0" means ON physically, "1" means OFF physically
+    function toggleLight(pin, turnOn) {
+      let value = turnOn ? 0 : 1; // inverted
+      let url = `${BASE_URL}?token=${AUTH_TOKEN}&V${pin}=${value}`;
+      fetch(url)
+        .then(response => {
+          if (response.ok) {
+            alert(`Command sent: Pin V${pin} -> ${value === 0 ? "ON" : "OFF"}`);
+          } else {
+            alert("Failed to send command.");
+          }
+        })
+        .catch(() => alert("Network error."));
+    }
+  </script>
+</body>
+</html>
