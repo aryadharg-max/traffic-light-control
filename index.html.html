@@ -2,71 +2,69 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Traffic Light Control</title>
+  <title>Traffic Light Controller</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #111;
-      color: white;
-      text-align: center;
-      padding: 20px;
-    }
-    h1 {
-      color: #0ff;
-    }
+    body { font-family: Arial, sans-serif; text-align: center; background: #222; color: white; }
+    h1 { margin-top: 20px; }
     .btn {
-      display: inline-block;
-      margin: 10px;
-      padding: 15px 25px;
-      font-size: 18px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      color: white;
+      font-size: 18px; padding: 10px 20px; margin: 5px;
+      border: none; border-radius: 8px; cursor: pointer;
     }
     .red { background: red; }
-    .yellow { background: orange; }
-    .green { background: green; }
-    .auto { background: blue; }
+    .yellow { background: gold; color: black; }
+    .green { background: limegreen; }
+    .blue { background: dodgerblue; }
+    .slider { width: 200px; margin: 10px; }
+    .section { margin-top: 20px; padding: 15px; border: 1px solid #555; border-radius: 10px; display: inline-block; }
   </style>
 </head>
 <body>
-  <h1>Traffic Light Control</h1>
+  <h1>🚦 Traffic Light Control</h1>
 
-  <h2>Red Light</h2>
-  <button class="btn red" onclick="toggleLight(1, true)">Turn ON</button>
-  <button class="btn red" onclick="toggleLight(1, false)">Turn OFF</button>
+  <!-- Light Control -->
+  <div class="section">
+    <h2>Lights</h2>
+    <button class="btn red" onclick="sendCommand(0,0)">Red ON</button>
+    <button class="btn red" onclick="sendCommand(0,1)">Red OFF</button><br>
+    <button class="btn yellow" onclick="sendCommand(1,0)">Yellow ON</button>
+    <button class="btn yellow" onclick="sendCommand(1,1)">Yellow OFF</button><br>
+    <button class="btn green" onclick="sendCommand(2,0)">Green ON</button>
+    <button class="btn green" onclick="sendCommand(2,1)">Green OFF</button>
+  </div>
 
-  <h2>Yellow Light</h2>
-  <button class="btn yellow" onclick="toggleLight(2, true)">Turn ON</button>
-  <button class="btn yellow" onclick="toggleLight(2, false)">Turn OFF</button>
+  <!-- Timers -->
+  <div class="section">
+    <h2>Light Timers (seconds)</h2>
+    <p>Red: <input type="range" min="0" max="60" value="30" class="slider" oninput="updateTimer(3,this.value)"><span id="valV3">30</span>s</p>
+    <p>Yellow: <input type="range" min="0" max="60" value="5" class="slider" oninput="updateTimer(4,this.value)"><span id="valV4">5</span>s</p>
+    <p>Green: <input type="range" min="0" max="60" value="30" class="slider" oninput="updateTimer(5,this.value)"><span id="valV5">30</span>s</p>
+  </div>
 
-  <h2>Green Light</h2>
-  <button class="btn green" onclick="toggleLight(3, true)">Turn ON</button>
-  <button class="btn green" onclick="toggleLight(3, false)">Turn OFF</button>
-
-  <h2>Automation</h2>
-  <button class="btn auto" onclick="toggleLight(4, true)">Enable</button>
-  <button class="btn auto" onclick="toggleLight(4, false)">Disable</button>
+  <!-- Automation -->
+  <div class="section">
+    <h2>Automation</h2>
+    <button class="btn blue" onclick="sendCommand(6,0)">Automation ON</button>
+    <button class="btn blue" onclick="sendCommand(6,1)">Automation OFF</button>
+  </div>
 
   <script>
-    const AUTH_TOKEN = "NZ19PT_cHiLij0HUaiHefkShjfDKhhl5"; // Your Blynk token
-    const BASE_URL = "https://blynk.cloud/external/api/update";
+    const AUTH_TOKEN = "NZ19PT_cHiLij0HUaiHefkShjfDKhhl5";
+    const BASE_URL = `https://blynk.cloud/external/api/update`;
 
-    // Inverted logic: sending "0" means ON physically, "1" means OFF physically
-    function toggleLight(pin, turnOn) {
-      let value = turnOn ? 0 : 1; // inverted
-      let url = `${BASE_URL}?token=${AUTH_TOKEN}&V${pin}=${value}`;
-      fetch(url)
-        .then(response => {
-          if (response.ok) {
-            alert(`Command sent: Pin V${pin} -> ${value === 0 ? "ON" : "OFF"}`);
-          } else {
-            alert("Failed to send command.");
-          }
+    function sendCommand(pin, value) {
+      fetch(`${BASE_URL}?token=${AUTH_TOKEN}&V${pin}=${value}`)
+        .then(r => {
+          if (!r.ok) throw new Error("Network error");
+          console.log(`Sent V${pin} = ${value}`);
         })
-        .catch(() => alert("Network error."));
+        .catch(err => alert("Error: " + err));
+    }
+
+    function updateTimer(pin, value) {
+      document.getElementById(`valV${pin}`).innerText = value;
+      sendCommand(pin, value);
     }
   </script>
 </body>
 </html>
+
