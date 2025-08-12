@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Traffic Light Control</title>
+  <style>
+    body { font-family: Arial; text-align: center; background: #111; color: white; }
+    button { font-size: 1.5em; padding: 10px 20px; margin: 10px; border: none; border-radius: 8px; cursor: pointer; }
+    .red { background: red; }
+    .yellow { background: gold; color: black; }
+    .green { background: green; }
+    .auto { background: #555; }
+  </style>
+</head>
+<body>
+  <h1>🚦 Traffic Light Control</h1>
+  <p>NodeMCU at <span id="ip">192.168.1.16</span></p>
+
+  <button class="red" onclick="sendCmd('redOn')">Red ON</button>
+  <button class="red" onclick="sendCmd('redOff')">Red OFF</button><br>
+
+  <button class="yellow" onclick="sendCmd('yellowOn')">Yellow ON</button>
+  <button class="yellow" onclick="sendCmd('yellowOff')">Yellow OFF</button><br>
+
+  <button class="green" onclick="sendCmd('greenOn')">Green ON</button>
+  <button class="green" onclick="sendCmd('greenOff')">Green OFF</button><br>
+
+  <button class="auto" onclick="sendCmd('auto')">Auto Mode</button>
+
+  <script>
+    const ip = "192.168.1.16"; // your NodeMCU IP
+    function sendCmd(cmd) {
+      fetch(`http://${ip}/${cmd}`)
+        .then(r => alert("Command sent: " + cmd))
+        .catch(e => alert("Error: " + e));
+    }
+  </script>
+</body>
+</html>
